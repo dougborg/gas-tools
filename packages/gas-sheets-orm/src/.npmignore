@@ -1,0 +1,5 @@
+# Exclude colocated test files from the published tarball.
+# (Root-level .npmignore is ignored by npm-packlist when `files` in
+# package.json lists a directory entry, so this lives inside `src/`.)
+**/__tests__/
+**/*.test.ts

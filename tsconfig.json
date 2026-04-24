@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["@types/google-apps-script"],
+    "lib": ["ES2020", "DOM"]
+  },
+  "include": ["packages/*/src/**/*"],
+  "exclude": [
+    "node_modules",
+    "**/dist",
+    "**/__tests__/**",
+    "**/*.test.ts"
+  ]
+}

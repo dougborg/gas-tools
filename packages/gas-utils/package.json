@@ -1,0 +1,53 @@
+{
+  "name": "@dougborg/gas-utils",
+  "version": "0.1.0",
+  "description": "Runtime helpers for Google Apps Script projects: structured logger, ARRAYFORMULA error auto-fix, visual cell feedback.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./arrayFormulaProtection": {
+      "types": "./src/arrayFormulaProtection.ts",
+      "default": "./src/arrayFormulaProtection.ts"
+    },
+    "./enhancedLogger": {
+      "types": "./src/enhancedLogger.ts",
+      "default": "./src/enhancedLogger.ts"
+    },
+    "./visualFeedback": {
+      "types": "./src/visualFeedback.ts",
+      "default": "./src/visualFeedback.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "keywords": [
+    "google-apps-script",
+    "gas",
+    "typescript"
+  ],
+  "author": "Doug Borg <doug@spotbikes.com>",
+  "license": "MIT",
+  "peerDependencies": {
+    "@types/google-apps-script": "^1.0.0 || ^2.0.0"
+  },
+  "devDependencies": {
+    "@types/google-apps-script": "^2.0.0",
+    "typescript": "^6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dougborg/build-queue-scripts.git",
+    "directory": "packages/gas-utils"
+  }
+}

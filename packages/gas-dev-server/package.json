@@ -1,0 +1,57 @@
+{
+  "name": "@dougborg/gas-dev-server",
+  "version": "0.1.0",
+  "description": "Local development server and mocks for Google Apps Script projects",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./mocks": {
+      "import": "./dist/mocks.js",
+      "types": "./dist/mocks.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "google-apps-script",
+    "gas",
+    "development",
+    "mock",
+    "testing",
+    "local-dev",
+    "vite"
+  ],
+  "author": "Doug Borg <doug@spotbikes.com>",
+  "license": "MIT",
+  "peerDependencies": {
+    "@types/google-apps-script": "^1.0.0 || ^2.0.0",
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@types/google-apps-script": "^2.0.0",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dougborg/build-queue-scripts.git",
+    "directory": "packages/gas-dev-server"
+  }
+}

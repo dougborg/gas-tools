@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GAS Local Development</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f5f5f5;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      header {
+        background: #4285f4;
+        color: white;
+        padding: 20px;
+        border-radius: 8px 8px 0 0;
+      }
+
+      h1 {
+        font-size: 24px;
+        font-weight: 500;
+      }
+
+      .content {
+        padding: 20px;
+      }
+
+      .functions-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .function-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .function-info h3 {
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+
+      .function-info p {
+        font-size: 14px;
+        color: #666;
+      }
+
+      button {
+        background: #4285f4;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #3367d6;
+      }
+
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .console {
+        margin-top: 20px;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 16px;
+        border-radius: 4px;
+        font-family: 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .console-entry {
+        margin-bottom: 8px;
+        padding: 4px;
+      }
+
+      .console-log {
+        color: #d4d4d4;
+      }
+
+      .console-error {
+        color: #f48771;
+      }
+
+      .console-success {
+        color: #89d185;
+      }
+
+      .console-info {
+        color: #75beff;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        margin-left: 8px;
+      }
+
+      .status-ready {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .status-running {
+        background: #fff3e0;
+        color: #f57c00;
+      }
+
+      .clear-btn {
+        background: #666;
+        font-size: 12px;
+        padding: 6px 12px;
+        margin-top: 10px;
+      }
+
+      .clear-btn:hover {
+        background: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🚀 Google Apps Script - Local Development</h1>
+        <p style="margin-top: 8px; opacity: 0.9;">Test your Apps Script functions locally without deployment</p>
+      </header>
+
+      <div class="content">
+        <div>
+          <h2 style="margin-bottom: 12px;">Available Functions <span class="status status-ready">Mocks Ready</span></h2>
+          <div id="functions-list" class="functions-list">
+            <!-- Functions will be injected here by JavaScript -->
+          </div>
+        </div>
+
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <h2>Console Output</h2>
+            <button class="clear-btn" onclick="clearConsole()">Clear Console</button>
+          </div>
+          <div id="console" class="console"></div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      // This will be populated by the dev server
+      const GAS_FUNCTIONS = window.__GAS_FUNCTIONS__ || [];
+
+      // Render function list
+      const functionsList = document.getElementById('functions-list');
+
+      if (GAS_FUNCTIONS.length === 0) {
+        functionsList.innerHTML = `
+          <div class="function-card">
+            <div class="function-info">
+              <h3>No functions registered</h3>
+              <p>Import your Apps Script functions and register them using window.__GAS_FUNCTIONS__</p>
+            </div>
+          </div>
+        `;
+      } else {
+        GAS_FUNCTIONS.forEach((func) => {
+          const card = document.createElement('div');
+          card.className = 'function-card';
+          card.innerHTML = `
+            <div class="function-info">
+              <h3>${func.name}</h3>
+              <p>${func.description || 'No description provided'}</p>
+            </div>
+            <button onclick="runFunction('${func.name}')" id="btn-${func.name}">
+              Run Function
+            </button>
+          `;
+          functionsList.appendChild(card);
+        });
+      }
+
+      // Console output
+      const consoleEl = document.getElementById('console');
+      const originalLog = console.log;
+      const originalError = console.error;
+      const originalWarn = console.warn;
+      const originalInfo = console.info;
+
+      function addToConsole(message, type = 'log') {
+        const entry = document.createElement('div');
+        entry.className = `console-entry console-${type}`;
+
+        const timestamp = new Date().toLocaleTimeString();
+        entry.innerHTML = `<span style="opacity: 0.6;">[${timestamp}]</span> ${message}`;
+
+        consoleEl.appendChild(entry);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      }
+
+      console.log = (...args) => {
+        originalLog(...args);
+        addToConsole(args.join(' '), 'log');
+      };
+
+      console.error = (...args) => {
+        originalError(...args);
+        addToConsole(args.join(' '), 'error');
+      };
+
+      console.warn = (...args) => {
+        originalWarn(...args);
+        addToConsole(args.join(' '), 'error');
+      };
+
+      console.info = (...args) => {
+        originalInfo(...args);
+        addToConsole(args.join(' '), 'info');
+      };
+
+      window.clearConsole = () => {
+        consoleEl.innerHTML = '';
+        console.log('Console cleared');
+      };
+
+      window.runFunction = async (functionName) => {
+        const func = GAS_FUNCTIONS.find(f => f.name === functionName);
+        if (!func) {
+          console.error(`Function ${functionName} not found`);
+          return;
+        }
+
+        const button = document.getElementById(`btn-${functionName}`);
+        button.disabled = true;
+        button.textContent = 'Running...';
+
+        console.log(`▶ Running ${functionName}...`);
+
+        try {
+          const result = await func.handler();
+          console.log(`✅ ${functionName} completed`);
+          if (result !== undefined) {
+            console.info('Result:', JSON.stringify(result, null, 2));
+          }
+        } catch (error) {
+          console.error(`❌ Error in ${functionName}:`, error.message);
+          console.error(error.stack);
+        } finally {
+          button.disabled = false;
+          button.textContent = 'Run Function';
+        }
+      };
+
+      // Log initial message
+      console.log('🚀 GAS Local Development Server initialized');
+      console.log(`📦 ${GAS_FUNCTIONS.length} functions available`);
+    </script>
+  </body>
+</html>

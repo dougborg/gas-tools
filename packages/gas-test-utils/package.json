@@ -1,0 +1,46 @@
+{
+  "name": "@dougborg/gas-test-utils",
+  "version": "0.1.0",
+  "description": "Vitest mock factories for Google Apps Script globals (SpreadsheetApp, UrlFetchApp, PropertiesService, Logger, Utilities, CacheService) plus generic HTTP response builders.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "keywords": [
+    "google-apps-script",
+    "gas",
+    "testing",
+    "vitest",
+    "mock",
+    "typescript"
+  ],
+  "author": "Doug Borg <doug@spotbikes.com>",
+  "license": "MIT",
+  "peerDependencies": {
+    "@types/google-apps-script": "^1.0.0 || ^2.0.0",
+    "vitest": "^3.0.0 || ^4.0.0"
+  },
+  "devDependencies": {
+    "@types/google-apps-script": "^2.0.0",
+    "typescript": "^6.0.0",
+    "vitest": "^4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dougborg/build-queue-scripts.git",
+    "directory": "packages/gas-test-utils"
+  }
+}

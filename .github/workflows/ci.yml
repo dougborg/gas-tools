@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Quality checks (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22.x', '23.x']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js with Volta
+        uses: volta-cli/action@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build workspace packages
+        run: npm run build
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Pack each package (smoke test)
+        run: |
+          mkdir -p .tarballs
+          for pkg in packages/*/; do
+            name=$(node -p "require('./${pkg}package.json').name")
+            echo "::group::npm pack $name"
+            npm pack -w "$name" --pack-destination .tarballs
+            echo "::endgroup::"
+          done
+          ls -la .tarballs/
