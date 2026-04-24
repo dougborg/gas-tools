@@ -96,9 +96,13 @@ export abstract class SheetOrmError extends Error {
     this.details = details;
     this.cause = cause;
 
-    // Maintains proper stack trace for where our error was thrown (only available on V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
+    // Maintains proper stack trace for where our error was thrown (only on V8).
+    // Cast avoids a hard dep on @types/node for the V8-only API.
+    const err = Error as unknown as {
+      captureStackTrace?: (target: object, constructorOpt?: Function) => void;
+    };
+    if (err.captureStackTrace) {
+      err.captureStackTrace(this, this.constructor);
     }
   }
 
