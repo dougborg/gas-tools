@@ -155,7 +155,9 @@ export function clearColumnMapCache(sheetName?: string): void {
     delete columnMapCache[sheetName];
   } else {
     // Clear all
-    Object.keys(columnMapCache).forEach((key) => delete columnMapCache[key]);
+    Object.keys(columnMapCache).forEach((key) => {
+      delete columnMapCache[key];
+    });
   }
 }
 

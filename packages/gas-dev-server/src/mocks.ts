@@ -98,11 +98,15 @@ export function createCacheServiceMock(options: MockOptions = {}) {
       },
       putAll: (values: Record<string, string>, expirationInSeconds?: number) => {
         if (options.verbose) console.log('[GAS Cache] putAll:', values, `(expires in ${expirationInSeconds}s)`);
-        Object.entries(values).forEach(([key, value]) => cache.set(key, value));
+        Object.entries(values).forEach(([key, value]) => {
+          cache.set(key, value);
+        });
       },
       removeAll: (keys: string[]) => {
         if (options.verbose) console.log('[GAS Cache] removeAll:', keys);
-        keys.forEach((key) => cache.delete(key));
+        keys.forEach((key) => {
+          cache.delete(key);
+        });
       }
     })
   };
@@ -139,7 +143,9 @@ export function createPropertiesServiceMock(options: MockOptions = {}) {
     },
     setProperties: (properties: Record<string, string>, deleteAllOthers?: boolean) => {
       if (deleteAllOthers) store.clear();
-      Object.entries(properties).forEach(([key, value]) => store.set(key, value));
+      Object.entries(properties).forEach(([key, value]) => {
+        store.set(key, value);
+      });
       if (options.verbose)
         console.log(`[GAS ${name}] setProperties:`, properties, `(deleteAllOthers: ${deleteAllOthers})`);
       return store;
