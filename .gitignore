@@ -6,4 +6,8 @@ coverage/
 *.tgz
 .vscode/
 .idea/
-.claude/
+.claude/*
+!.claude/agents/
+!.claude/commands/
+!.claude/skills/
+!.claude/settings.json
