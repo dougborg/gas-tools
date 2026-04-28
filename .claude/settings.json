@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=\"$(jq -r '.tool_input.file_path // empty' <<< \"$CLAUDE_HOOK_INPUT\")\"; if [ -n \"$FILE\" ] && [[ \"$FILE\" == *.ts || \"$FILE\" == *.tsx || \"$FILE\" == *.json ]]; then cd \"$CLAUDE_PROJECT_DIR\" && npx --no-install biome check --write --no-errors-on-unmatched \"$FILE\" 2>/dev/null || true; fi"
+          },
+          {
+            "type": "command",
+            "command": "FILE=\"$(jq -r '.tool_input.file_path // empty' <<< \"$CLAUDE_HOOK_INPUT\")\"; case \"$FILE\" in *\"/packages/gas-sheets-orm/src/\"*) echo '📋 gas-sheets-orm: DomainModel.validate() and toSheetRow() are public contracts — downstream consumers (katana-sheets-toolkit) depend on them. See CLAUDE.md.' ;; esac"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && npm run typecheck 2>&1 | tail -20"
+          }
+        ]
+      }
+    ]
+  }
+}

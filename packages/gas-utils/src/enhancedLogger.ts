@@ -48,6 +48,7 @@ interface ErrorContext {
  * - Error storage for post-mortem debugging
  * - Function wrapping for automatic instrumentation
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: EnhancedLogger is the package's public namespace API (`EnhancedLogger.log(...)`); converting to free functions would be a breaking change for consumers.
 export class EnhancedLogger {
   // Lazily-evaluated session identifier with fallback when Utilities.getUuid is unavailable in tests
   private static sessionId: string = (() => {

@@ -461,131 +461,208 @@ function scanAndFixArrayFormulaErrors(shouldFix: boolean): ErrorScanResult {
   const errorDetails: Array<{ location: string; message: string; blockingCell: string | null }> = [];
 
   sheets.forEach((sheet) => {
-    const sheetName = sheet.getName();
-    const lastRow = sheet.getLastRow();
-    const lastCol = sheet.getLastColumn();
-
-    if (lastRow < 1 || lastCol < 1) {
-      Logger.log(`  ⏭️  Skipping empty sheet: "${sheetName}" (no data)`);
-      return;
-    }
-
-    Logger.log(`  🔍 Scanning sheet: "${sheetName}" (${lastRow} rows × ${lastCol} columns)`);
-    let sheetHadErrors = false;
-
-    try {
-      // Find all #REF! errors in the sheet
-      const errorCells = findErrorCells(sheet);
-
-      if (errorCells.length > 0) {
-        Logger.log(
-          `  📍 Found ${errorCells.length} ${ERROR_PATTERNS.REF_ERROR_DISPLAY} ${pluralize(errorCells.length, 'error')} in "${sheetName}"`
-        );
-      }
-
-      // Batch fetch detailed error messages using Sheets API v4
-      const cellRefs = errorCells.map((ec) => ec.cellA1);
-      const errorMessages = getBatchErrorDetails(spreadsheetId, sheetName, cellRefs);
-
-      // Second pass: process errors and fix blocking cells
-      for (const errorCell of errorCells) {
-        const errorMessage = errorMessages.get(errorCell.cellA1);
-
-        // Debug: Log the actual error message we received
-        Logger.log(`  🔍 Error at ${errorCell.cellA1}: ${errorMessage ? `"${errorMessage}"` : '(no message)'}`);
-
-        // Check if this is an ARRAYFORMULA expansion error
-        if (errorMessage?.includes(ERROR_PATTERNS.ARRAY_EXPANSION_ERROR)) {
-          totalErrors++;
-          const location = `${sheetName}!${errorCell.cellA1}`;
-
-          // Extract the blocking cell reference from error message
-          // NOTE: This regex depends on Google Sheets' error message format.
-          // Current format: "Array result was not expanded because it would overwrite data in  V4387."
-          // The whitespace before the cell reference may vary.
-          const match = errorMessage.match(ERROR_PATTERNS.OVERWRITE_DATA_PATTERN);
-          const blockingCellA1 = match ? match[1] : null;
-
-          Logger.log(`  📍 Detected ARRAYFORMULA error: ${location}, blocking cell: ${blockingCellA1 || 'unknown'}`);
-
-          errorDetails.push({ location, message: errorMessage, blockingCell: blockingCellA1 });
-
-          if (shouldFix && blockingCellA1) {
-            try {
-              // Parse error cell and blocking cell positions
-              const errorPos = parseA1Notation(errorCell.cellA1);
-              const blockingPos = parseA1Notation(blockingCellA1);
-
-              if (!errorPos || !blockingPos) {
-                Logger.log(
-                  `    ⚠️  ${ERROR_MESSAGES.INVALID_CELL_NOTATION} in "${sheetName}": error=${errorCell.cellA1}, blocking=${blockingCellA1}. ` +
-                    `Error message: "${errorMessage}"`
-                );
-                continue;
-              }
-
-              // Determine expansion direction and calculate clearing range
-              const expansion = determineExpansionDirection(errorPos, blockingPos, lastRow, lastCol);
-
-              if (expansion.direction === ExpansionDirection.INVALID) {
-                Logger.log(`    ⚠️  ${expansion.reason}. Manual intervention needed.`);
-                continue;
-              }
-
-              const clearRange = expansion.clearRange!;
-              Logger.log(`    🧹 Detected ${expansion.direction} ARRAYFORMULA, clearing: ${sheetName}!${clearRange}`);
-
-              // Analyze clearing range for formulas and non-empty cells
-              const clearingRange = sheet.getRange(clearRange);
-              const analysis = analyzeClearingRange(clearingRange.getFormulas(), clearingRange.getDisplayValues());
-
-              Logger.log(
-                `    📊 Clearing range "${sheetName}!${clearRange}": ` +
-                  `${analysis.totalCells} total cells, ${analysis.nonEmptyCells} non-empty, ${analysis.formulaCells} formulas`
-              );
-
-              if (analysis.hasFormulas) {
-                // Don't auto-clear if there are formulas in the range
-                Logger.log(
-                  `    ⚠️  Blocking region in "${sheetName}" ${ERROR_MESSAGES.FORMULA_IN_RANGE}. ` +
-                    `Found ${analysis.formulaCells} ${pluralize(analysis.formulaCells, 'formula')}. Manual intervention needed.`
-                );
-              } else {
-                // Safe to clear - no formulas in the range
-                Logger.log(`    🧹 Safe to clear (no formulas in range)`);
-                clearingRange.clearContent();
-                Logger.log(
-                  `    ✅ Cleared ${analysis.nonEmptyCells} non-empty ${pluralize(analysis.nonEmptyCells, 'cell')} in blocking region "${sheetName}!${clearRange}"`
-                );
-                totalFixed++;
-                sheetHadErrors = true;
-              }
-            } catch (e) {
-              EnhancedLogger.logError(e instanceof Error ? e : new Error(String(e)), {
-                function: 'scanAndFixArrayFormulaErrors',
-                module: 'arrayFormulaProtection',
-                contextData: { sheetName, blockingCell: blockingCellA1, errorCell: errorCell.cellA1 }
-              });
-            }
-          }
-        }
-      }
-
-      // Force recalculation of the sheet if we cleared any blocking cells
-      if (shouldFix && sheetHadErrors) {
-        Logger.log(`  🔄 Forcing recalculation for sheet "${sheetName}"`);
-        SpreadsheetApp.flush();
-      }
-    } catch (e) {
-      EnhancedLogger.logError(e instanceof Error ? e : new Error(String(e)), {
-        function: 'scanAndFixArrayFormulaErrors',
-        module: 'arrayFormulaProtection',
-        contextData: { sheetName, operation: 'sheet scan' }
-      });
-    }
+    const sheetResult = scanSheet(sheet, shouldFix, spreadsheetId);
+    totalErrors += sheetResult.totalErrors;
+    totalFixed += sheetResult.totalFixed;
+    errorDetails.push(...sheetResult.errorDetails);
   });
 
   return { totalErrors, totalFixed, errorDetails };
+}
+
+/**
+ * Scan a single sheet for ARRAYFORMULA errors and (optionally) fix them.
+ *
+ * Extracted from `scanAndFixArrayFormulaErrors` to keep cognitive complexity
+ * tractable. Returns the per-sheet error counts and details so the caller
+ * can aggregate across sheets.
+ */
+function scanSheet(
+  sheet: GoogleAppsScript.Spreadsheet.Sheet,
+  shouldFix: boolean,
+  spreadsheetId: string
+): ErrorScanResult {
+  const sheetName = sheet.getName();
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  const errorDetails: Array<{ location: string; message: string; blockingCell: string | null }> = [];
+
+  if (lastRow < 1 || lastCol < 1) {
+    Logger.log(`  ⏭️  Skipping empty sheet: "${sheetName}" (no data)`);
+    return { totalErrors: 0, totalFixed: 0, errorDetails };
+  }
+
+  Logger.log(`  🔍 Scanning sheet: "${sheetName}" (${lastRow} rows × ${lastCol} columns)`);
+
+  let totalErrors = 0;
+  let totalFixed = 0;
+
+  try {
+    const errorCells = findErrorCells(sheet);
+
+    if (errorCells.length > 0) {
+      Logger.log(
+        `  📍 Found ${errorCells.length} ${ERROR_PATTERNS.REF_ERROR_DISPLAY} ${pluralize(errorCells.length, 'error')} in "${sheetName}"`
+      );
+    }
+
+    const cellRefs = errorCells.map((ec) => ec.cellA1);
+    const errorMessages = getBatchErrorDetails(spreadsheetId, sheetName, cellRefs);
+
+    for (const errorCell of errorCells) {
+      const result = processErrorCell({
+        sheet,
+        sheetName,
+        errorCell,
+        errorMessage: errorMessages.get(errorCell.cellA1),
+        shouldFix,
+        lastRow,
+        lastCol
+      });
+      totalErrors += result.errorCount;
+      totalFixed += result.fixedCount;
+      if (result.detail) errorDetails.push(result.detail);
+    }
+
+    if (shouldFix && totalFixed > 0) {
+      Logger.log(`  🔄 Forcing recalculation for sheet "${sheetName}"`);
+      SpreadsheetApp.flush();
+    }
+  } catch (e) {
+    EnhancedLogger.logError(e instanceof Error ? e : new Error(String(e)), {
+      function: 'scanAndFixArrayFormulaErrors',
+      module: 'arrayFormulaProtection',
+      contextData: { sheetName, operation: 'sheet scan' }
+    });
+  }
+
+  return { totalErrors, totalFixed, errorDetails };
+}
+
+interface ProcessErrorCellInput {
+  sheet: GoogleAppsScript.Spreadsheet.Sheet;
+  sheetName: string;
+  errorCell: { cellA1: string };
+  errorMessage: string | undefined;
+  shouldFix: boolean;
+  lastRow: number;
+  lastCol: number;
+}
+
+interface ProcessErrorCellResult {
+  errorCount: 0 | 1;
+  fixedCount: 0 | 1;
+  detail: { location: string; message: string; blockingCell: string | null } | null;
+}
+
+/**
+ * Classify and (optionally) fix one cell flagged as a #REF! error.
+ *
+ * Returns counts so the caller can aggregate without exposing internal state.
+ * Cells whose error is not an ARRAYFORMULA expansion error are no-ops.
+ */
+function processErrorCell(input: ProcessErrorCellInput): ProcessErrorCellResult {
+  const { sheet, sheetName, errorCell, errorMessage, shouldFix, lastRow, lastCol } = input;
+
+  Logger.log(`  🔍 Error at ${errorCell.cellA1}: ${errorMessage ? `"${errorMessage}"` : '(no message)'}`);
+
+  if (!errorMessage?.includes(ERROR_PATTERNS.ARRAY_EXPANSION_ERROR)) {
+    return { errorCount: 0, fixedCount: 0, detail: null };
+  }
+
+  const location = `${sheetName}!${errorCell.cellA1}`;
+  // Regex depends on Google Sheets' error format:
+  // "Array result was not expanded because it would overwrite data in  V4387."
+  const match = errorMessage.match(ERROR_PATTERNS.OVERWRITE_DATA_PATTERN);
+  const blockingCellA1 = match ? match[1] : null;
+
+  Logger.log(`  📍 Detected ARRAYFORMULA error: ${location}, blocking cell: ${blockingCellA1 || 'unknown'}`);
+  const detail = { location, message: errorMessage, blockingCell: blockingCellA1 };
+
+  if (!shouldFix || !blockingCellA1) {
+    return { errorCount: 1, fixedCount: 0, detail };
+  }
+
+  const fixed = tryFixArrayFormulaError(
+    sheet,
+    sheetName,
+    errorCell.cellA1,
+    blockingCellA1,
+    errorMessage,
+    lastRow,
+    lastCol
+  );
+  return { errorCount: 1, fixedCount: fixed ? 1 : 0, detail };
+}
+
+/**
+ * Attempt to clear the blocking range for one ARRAYFORMULA error.
+ *
+ * Returns `true` if the blocking region was successfully cleared (and the
+ * caller should increment `totalFixed`), `false` otherwise. All logging and
+ * error capture is handled internally — failures are reported via
+ * `EnhancedLogger.logError` rather than propagated.
+ */
+function tryFixArrayFormulaError(
+  sheet: GoogleAppsScript.Spreadsheet.Sheet,
+  sheetName: string,
+  errorCellA1: string,
+  blockingCellA1: string,
+  errorMessage: string,
+  lastRow: number,
+  lastCol: number
+): boolean {
+  try {
+    const errorPos = parseA1Notation(errorCellA1);
+    const blockingPos = parseA1Notation(blockingCellA1);
+
+    if (!errorPos || !blockingPos) {
+      Logger.log(
+        `    ⚠️  ${ERROR_MESSAGES.INVALID_CELL_NOTATION} in "${sheetName}": error=${errorCellA1}, blocking=${blockingCellA1}. ` +
+          `Error message: "${errorMessage}"`
+      );
+      return false;
+    }
+
+    const expansion = determineExpansionDirection(errorPos, blockingPos, lastRow, lastCol);
+    if (expansion.direction === ExpansionDirection.INVALID || !expansion.clearRange) {
+      Logger.log(`    ⚠️  ${expansion.reason ?? 'No clear range computed'}. Manual intervention needed.`);
+      return false;
+    }
+
+    const clearRange = expansion.clearRange;
+    Logger.log(`    🧹 Detected ${expansion.direction} ARRAYFORMULA, clearing: ${sheetName}!${clearRange}`);
+
+    const clearingRange = sheet.getRange(clearRange);
+    const analysis = analyzeClearingRange(clearingRange.getFormulas(), clearingRange.getDisplayValues());
+
+    Logger.log(
+      `    📊 Clearing range "${sheetName}!${clearRange}": ` +
+        `${analysis.totalCells} total cells, ${analysis.nonEmptyCells} non-empty, ${analysis.formulaCells} formulas`
+    );
+
+    if (analysis.hasFormulas) {
+      Logger.log(
+        `    ⚠️  Blocking region in "${sheetName}" ${ERROR_MESSAGES.FORMULA_IN_RANGE}. ` +
+          `Found ${analysis.formulaCells} ${pluralize(analysis.formulaCells, 'formula')}. Manual intervention needed.`
+      );
+      return false;
+    }
+
+    Logger.log(`    🧹 Safe to clear (no formulas in range)`);
+    clearingRange.clearContent();
+    Logger.log(
+      `    ✅ Cleared ${analysis.nonEmptyCells} non-empty ${pluralize(analysis.nonEmptyCells, 'cell')} in blocking region "${sheetName}!${clearRange}"`
+    );
+    return true;
+  } catch (e) {
+    EnhancedLogger.logError(e instanceof Error ? e : new Error(String(e)), {
+      function: 'scanAndFixArrayFormulaErrors',
+      module: 'arrayFormulaProtection',
+      contextData: { sheetName, blockingCell: blockingCellA1, errorCell: errorCellA1 }
+    });
+    return false;
+  }
 }
 
 /**

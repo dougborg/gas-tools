@@ -39,6 +39,8 @@ export interface ColumnMapping {
   [propertyName: string]: string | RegExp | RegExp[];
 }
 
+type SchemaIssueSeverity = 'throw' | 'warn' | 'info';
+
 /**
  * Repository configuration for a domain model
  *
@@ -371,49 +373,38 @@ export class Repository<T extends DomainModel> {
     const mode = this.config.validationMode || 'lenient';
     const sheetName = typeof this.config.sheetName === 'string' ? this.config.sheetName : '<pattern>';
 
-    // Handle missing required columns
     if (result.missingRequired.length > 0) {
       const message =
         `Sheet "${sheetName}" is missing required columns: ${result.missingRequired.join(', ')}\n` +
         `These columns must exist in the sheet for this entity type.`;
-
-      if (mode === 'strict' || mode === 'lenient') {
-        throw new Error(message);
-      } else {
-        // warn-only mode
-        console.warn(`⚠️ ${message}`);
-      }
+      this.emitSchemaIssue(message, mode === 'warn-only' ? 'warn' : 'throw');
     }
 
-    // Handle missing optional columns
     if (result.missingOptional.length > 0) {
       const message =
         `Sheet "${sheetName}" is missing optional columns: ${result.missingOptional.join(', ')}\n` +
         `These columns will use default/null values.`;
-
-      if (mode === 'strict') {
-        throw new Error(message);
-      } else if (mode === 'lenient') {
-        console.warn(`⚠️ ${message}`);
-      } else {
-        // warn-only mode
-        console.info(`ℹ️ ${message}`);
-      }
+      const severity: SchemaIssueSeverity = mode === 'strict' ? 'throw' : mode === 'lenient' ? 'warn' : 'info';
+      this.emitSchemaIssue(message, severity);
     }
 
-    // Handle extra columns
     if (result.extraColumns.length > 0 && this.config.allowExtraColumns !== false) {
       const message =
         `Sheet "${sheetName}" contains columns not in schema: ${result.extraColumns.join(', ')}\n` +
         `These columns will be ignored during read/write operations.`;
-
-      if (mode === 'strict') {
-        throw new Error(message);
-      } else {
-        // lenient or warn-only mode
-        console.info(`ℹ️ ${message}`);
-      }
+      this.emitSchemaIssue(message, mode === 'strict' ? 'throw' : 'info');
     }
+  }
+
+  private emitSchemaIssue(message: string, severity: SchemaIssueSeverity): void {
+    if (severity === 'throw') {
+      throw new Error(message);
+    }
+    if (severity === 'warn') {
+      console.warn(`⚠️ ${message}`);
+      return;
+    }
+    console.info(`ℹ️ ${message}`);
   }
 
   /**
