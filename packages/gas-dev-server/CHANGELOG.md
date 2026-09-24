@@ -5,6 +5,13 @@ All notable changes to `@dougborg/gas-dev-server` will be documented in this fil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1](https://github.com/dougborg/gas-tools/compare/gas-dev-server-v0.1.0...gas-dev-server-v0.1.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **gas-dev-server:** require a patched vite in the peer range ([c60944b](https://github.com/dougborg/gas-tools/commit/c60944b380f0488efded084d568bc676299f1ef9)), closes [#28](https://github.com/dougborg/gas-tools/issues/28)
+
 ## [0.1.0] - 2026-04-23
 
 Initial release. Renamed from `@gas-tools/dev-server` — now under the `@dougborg`
