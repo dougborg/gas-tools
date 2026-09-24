@@ -37,7 +37,6 @@
   "author": "Doug Borg <doug@spotbikes.com>",
   "license": "MIT",
   "volta": {
-    "node": "22.22.0",
-    "npm": "11.12.1"
+    "node": "26.8.2"
   }
 }
