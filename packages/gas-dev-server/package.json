@@ -42,7 +42,7 @@
   "license": "MIT",
   "peerDependencies": {
     "@types/google-apps-script": "^1.0.0 || ^2.0.0",
-    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+    "vite": "^6.4.3 || ^7.3.5 || ^8.0.16"
   },
   "devDependencies": {
     "@types/google-apps-script": "^2.0.0",
