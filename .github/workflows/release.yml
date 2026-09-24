@@ -102,6 +102,9 @@ jobs:
       # No dependency cache in the release build: a poisoned cache could
       # reach the published package.
       - run: npm ci
+      # Build and check the whole workspace in every leg, not just this
+      # package: a release can bump a sibling's dependency range, and a
+      # cross-package break must stop the publish.
       - run: npm run build
       - run: npm run quality
       - name: Stage the release for maintainer approval
