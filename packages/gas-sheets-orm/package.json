@@ -40,7 +40,7 @@
     "@types/google-apps-script": "^1.0.0 || ^2.0.0"
   },
   "dependencies": {
-    "@dougborg/gas-utils": "*"
+    "@dougborg/gas-utils": "^0.1.0"
   },
   "devDependencies": {
     "@types/google-apps-script": "^2.0.0",
@@ -48,7 +48,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dougborg/build-queue-scripts.git",
+    "url": "git+https://github.com/dougborg/gas-tools.git",
     "directory": "packages/gas-sheets-orm"
   }
 }

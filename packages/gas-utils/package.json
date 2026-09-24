@@ -47,7 +47,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dougborg/build-queue-scripts.git",
+    "url": "git+https://github.com/dougborg/gas-tools.git",
     "directory": "packages/gas-utils"
   }
 }
