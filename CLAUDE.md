@@ -6,9 +6,9 @@ Harness documentation for the `@dougborg/gas-tools` monorepo. This file is loade
 
 - **Purpose**: Reusable Google Apps Script (GAS) tooling published under `@dougborg/*`.
 - **Packages**: `gas-utils` (runtime helpers), `gas-sheets-orm` (sheet ORM), `gas-test-utils` (Vitest mocks), `gas-dev-server` (local Vite dev server + GAS mocks).
-- **Stack**: TypeScript (strict), npm workspaces, Biome (lint+fmt), Vitest, tsc. Node 22 (Volta).
+- **Stack**: TypeScript (strict), npm workspaces, Biome (lint+fmt), Vitest, tsc. Node 26.8.2 (Volta and `.nvmrc`; npm 11.x for `npm stage`).
 - **Verify command**: `npm run quality` — runs `typecheck && lint && test`.
-- **CI**: `.github/workflows/ci.yml` on push/PR. Node 22 + 23 matrix.
+- **CI**: `.github/workflows/ci.yml` on push/PR. Node 22 + 23 + 26.8.2 matrix. `.github/workflows/release.yml` runs release-please and stages npm publishes.
 
 ## Hard rules
 
@@ -26,7 +26,7 @@ Harness documentation for the `@dougborg/gas-tools` monorepo. This file is loade
 gas-utils       → no deps on other workspace packages
 gas-sheets-orm  → depends on gas-utils only
 gas-test-utils  → no deps on the above; vitest is a peer dep
-gas-dev-server  → standalone (own package-lock.json); only package with a build step
+gas-dev-server  → standalone; only package with a build step
 ```
 
 A change that introduces a circular or upward dep is a refactor that needs explicit discussion.
@@ -73,10 +73,10 @@ Three contracts that must stay stable — downstream consumers (`katana-sheets-t
 
 ## Publishing model
 
-- Each package has its own version, CHANGELOG, README. **Do not bump versions in lockstep.**
+- Each package has its own version, CHANGELOG, README, and release-please component. **Never bump versions or edit CHANGELOGs by hand**; release-please does both from Conventional Commits.
 - `package.json` `exports` points at `./src/*.ts` for source-as-published. Consumers' bundlers handle the TS. `gas-dev-server` is the exception — it builds to `dist/` because it is a Vite plugin consumed by Node tools.
 - `@types/google-apps-script` is a `peerDependency` on runtime packages — consumers control the version.
-- Publishing is manual (`npm publish` per package after `npm version`). Not yet automated.
+- Publishing is automated: merging the release-please PR tags each released package (`<package>-v<version>`) and `release.yml` stages it on npm with provenance for maintainer approval. See the README Release section.
 
 ## Harness — agents and skills
 
