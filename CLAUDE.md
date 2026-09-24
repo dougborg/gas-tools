@@ -8,7 +8,7 @@ Harness documentation for the `@dougborg/gas-tools` monorepo. This file is loade
 - **Packages**: `gas-utils` (runtime helpers), `gas-sheets-orm` (sheet ORM), `gas-test-utils` (Vitest mocks), `gas-dev-server` (local Vite dev server + GAS mocks).
 - **Stack**: TypeScript (strict), npm workspaces, Biome (lint+fmt), Vitest, tsc. Node 26.8.2 (Volta and `.nvmrc`; npm 11.x for `npm stage`).
 - **Verify command**: `npm run quality` — runs `typecheck && lint && test`.
-- **CI**: `.github/workflows/ci.yml` on push/PR. Node 22 + 23 + 26.8.2 matrix. `.github/workflows/release.yml` runs release-please and stages npm publishes.
+- **CI**: `.github/workflows/ci.yml` on push/PR. Node 22 + 26.8.2 matrix. `.github/workflows/release.yml` runs release-please and stages npm publishes.
 
 ## Hard rules
 

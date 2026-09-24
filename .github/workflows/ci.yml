@@ -17,9 +17,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 22.x and 23.x are the required checks on main; 26.8.2 is the
-        # .nvmrc version the release workflow builds and publishes with.
-        node-version: ['22.x', '23.x', '26.8.2']
+        # Both legs are required checks on main: 22.x is the oldest supported
+        # line, and 26.8.2 is the .nvmrc version the release workflow builds
+        # and publishes with.
+        node-version: ['22.x', '26.8.2']
 
     steps:
       - name: Checkout

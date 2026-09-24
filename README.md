@@ -43,7 +43,7 @@ Katana-specific code lives in a sibling repo: [dougborg/katana-sheets-toolkit](h
 ```
 gas-tools/
 ├── .github/workflows/
-│   ├── ci.yml                # lint + typecheck + test on push/PR (Node 22, 23, 26)
+│   ├── ci.yml                # lint + typecheck + test on push/PR (Node 22, 26)
 │   └── release.yml           # release-please + staged npm publish with provenance
 ├── packages/
 │   ├── gas-utils/
