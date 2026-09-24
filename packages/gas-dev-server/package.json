@@ -1,6 +1,6 @@
 {
   "name": "@dougborg/gas-dev-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local development server and mocks for Google Apps Script projects",
   "type": "module",
   "main": "./dist/index.js",
