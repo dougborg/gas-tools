@@ -1,0 +1,109 @@
+name: Release
+
+# release-please (manifest mode, one component per package) keeps one
+# release PR open on main. Merging it creates a tag and GitHub Release for
+# each package it bumps (for example gas-utils-v0.2.0); the publish job then
+# runs in this same workflow, once per released package. npm trusts this file
+# (release.yml) as each package's trusted publisher, so the repository stores
+# no npm token; renaming it breaks publishing. The trusted publisher may only
+# stage: a maintainer approves each staged version with 2FA (npm stage
+# approve, or the Staged Packages tab) before it goes live, so a compromised
+# workflow cannot ship a release alone.
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # release-please writes with the release App's installation token, not
+    # GITHUB_TOKEN, so this job grants the default token nothing.
+    permissions: {}
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+      releases: ${{ steps.releases.outputs.releases }}
+    steps:
+      # The release PR is opened with a token minted from the
+      # dougborg-release-please GitHub App instead of GITHUB_TOKEN, so the
+      # pull_request workflows behind the required checks run on it
+      # (GITHUB_TOKEN-authored events never trigger other workflows).
+      # Without the App credentials the job fails here rather than falling
+      # back to GITHUB_TOKEN and opening a release PR that cannot pass.
+      - name: Require the release App credentials
+        env:
+          APP_ID: ${{ vars.RELEASE_PLEASE_APP_ID }}
+          PRIVATE_KEY_SET: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY != '' }}
+        run: |
+          if [ -z "$APP_ID" ] || [ "$PRIVATE_KEY_SET" != "true" ]; then
+            echo "::error::Set the RELEASE_PLEASE_APP_ID variable and RELEASE_PLEASE_APP_PRIVATE_KEY secret (dougborg-release-please App); see the README Release section."
+            exit 1
+          fi
+      - name: Mint GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          # Only what release-please uses: the release branch, tags and
+          # Releases (contents), the release PR (pull-requests), and its
+          # autorelease labels (issues).
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+      # paths_released lists the package directories released by this run;
+      # pair each with its own tag (<path>--tag_name) so the publish matrix
+      # checks out and publishes exactly those packages.
+      - name: List the released packages
+        id: releases
+        if: steps.release.outputs.releases_created == 'true'
+        env:
+          OUTPUTS: ${{ toJSON(steps.release.outputs) }}
+        run: |
+          releases=$(jq -c '. as $o | $o.paths_released | fromjson | map({path: ., tag: $o[. + "--tag_name"]})' <<< "$OUTPUTS")
+          echo "Released: $releases"
+          echo "releases=$releases" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    name: Publish ${{ matrix.release.tag }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ${{ fromJSON(needs.release-please.outputs.releases) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ matrix.release.tag }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+      # No dependency cache in the release build: a poisoned cache could
+      # reach the published package.
+      - run: npm ci
+      - run: npm run build
+      - run: npm run quality
+      - name: Stage the release for maintainer approval
+        working-directory: ${{ matrix.release.path }}
+        run: npm stage publish . --provenance --access public

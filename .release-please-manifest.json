@@ -1,0 +1,6 @@
+{
+  "packages/gas-utils": "0.1.0",
+  "packages/gas-sheets-orm": "0.1.0",
+  "packages/gas-test-utils": "0.1.0",
+  "packages/gas-dev-server": "0.1.0"
+}
