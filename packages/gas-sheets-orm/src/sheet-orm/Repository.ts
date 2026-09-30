@@ -22,6 +22,7 @@
  * @module lib/sheet-orm/Repository
  */
 
+import { withSheetsRetry } from './sheetsRetry.js';
 import type { BatchOperationResult, ColumnMappingResult, DomainModel, ValidationMode } from './types.js';
 
 /**
@@ -681,18 +682,27 @@ export class Repository<T extends DomainModel> {
       const headerRange = sheet.getRange(1, 1, 1, lastColumn);
       const headerA1 = headerRange.getA1Notation();
 
-      // Check if Sheets API is available
-      if (!Sheets?.Spreadsheets?.Values) {
+      // Check if Sheets API is available. typeof guard handles the case where
+      // the Advanced Sheets service isn't enabled and `Sheets` is not a defined
+      // global (optional chaining alone would throw ReferenceError). Capture
+      // into a local so the closure below sees the narrowed type.
+      if (typeof Sheets === 'undefined' || !Sheets?.Spreadsheets?.Values) {
         throw new Error(
           'Sheets API service is not available. Please enable the Sheets API in your Google Apps Script project.'
         );
       }
+      const valuesApi = Sheets.Spreadsheets.Values;
 
-      // Append using Sheets API with USER_ENTERED to handle formulas
-      Sheets.Spreadsheets.Values.append({ values }, ss.getId(), `${sheet.getName()}!${headerA1}`, {
-        valueInputOption: 'USER_ENTERED',
-        insertDataOption: 'INSERT_ROWS'
-      });
+      // Append using Sheets API with USER_ENTERED to handle formulas. Wrapped in
+      // withSheetsRetry to absorb transient Sheets-side failures ("Empty response",
+      // brief 5xx, momentary spreadsheet locks) — without this, a single GFE hiccup
+      // surfaces the whole batch as a hard failure. See sheetsRetry.ts.
+      withSheetsRetry(() =>
+        valuesApi.append({ values }, ss.getId(), `${sheet.getName()}!${headerA1}`, {
+          valueInputOption: 'USER_ENTERED',
+          insertDataOption: 'INSERT_ROWS'
+        })
+      );
 
       Logger.log('✅ batchInsert: Added %d rows to %s', validEntities.length, sheet.getName());
 
