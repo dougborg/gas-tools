@@ -1,6 +1,6 @@
 {
   "name": "@dougborg/gas-sheets-orm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Type-safe sheet-as-database ORM for Google Apps Script: schema registry, repository pattern, domain models, validation.",
   "type": "module",
   "exports": {
