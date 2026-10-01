@@ -10,7 +10,7 @@ Kills the `(globalThis as any).UrlFetchApp = vi.fn()` boilerplate that every GAS
 npm install --save-dev @dougborg/gas-test-utils
 ```
 
-Peer dependencies: `vitest` (`^3` or `^4`) and `@types/google-apps-script`.
+Peer dependencies: `vitest` (`^4.1.11` or `^5`) and `@types/google-apps-script`. Vitest 3 and 4.0–4.1.10 are not supported: they are affected by [GHSA-82fw-gwwq-j7x9](https://github.com/advisories/GHSA-82fw-gwwq-j7x9), which has no 3.x fix.
 
 ## Quick start
 

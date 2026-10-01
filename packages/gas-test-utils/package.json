@@ -31,7 +31,7 @@
   "license": "MIT",
   "peerDependencies": {
     "@types/google-apps-script": "^1.0.0 || ^2.0.0",
-    "vitest": "^3.0.0 || ^4.0.0"
+    "vitest": "^4.1.11 || ^5.0.0"
   },
   "devDependencies": {
     "@types/google-apps-script": "^2.0.0",
