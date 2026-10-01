@@ -1,6 +1,6 @@
 {
   "name": "@dougborg/gas-test-utils",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Vitest mock factories for Google Apps Script globals (SpreadsheetApp, UrlFetchApp, PropertiesService, Logger, Utilities, CacheService) plus generic HTTP response builders.",
   "type": "module",
   "exports": {
